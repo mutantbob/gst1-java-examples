@@ -53,7 +53,8 @@ public class TooMuchPlumbing
         Support.addDebuggingBusListeners(pipe.getBus());
         Support.rigQuitOnEOS(pipe.getBus());
 
-        pipe.getBus().connect((source, old, current, pending) -> System.out.println("STATE CHANGD "+source+" "+old+" "+current+" "+pending));
+        pipe.getBus().connect((source, old, current, pending) -> System.out.println("STATE CHANGED "+source+" "+old+" "+current+" "+pending));
+        pipe.getBus().connect((Bus.MESSAGE) (bus, message) -> System.out.println("MESSAGE "+message.getType()+" "+bus+" "+message));
 
         pipe.play();
 
@@ -65,13 +66,13 @@ public class TooMuchPlumbing
     {
         private final Pipeline pipe;
         private final Element mux;
-        int padCount;
+        int serial;
 
         public ConnectSometimesPads(Pipeline pipe, Element mux)
         {
             this.pipe = pipe;
             this.mux = mux;
-            padCount = 0;
+            serial = 0;
         }
 
         @Override
@@ -84,18 +85,25 @@ public class TooMuchPlumbing
 
             Caps caps = pad.getCaps();
             if (caps.getStructure(0).getName().startsWith("video")) {
-                connectVideoReencode(pad);
+                Bin venc = connectVideoReencode(pad);
+
+                StateChangeReturn x = venc.setState(State.PLAYING); // doesn't seem to kickstart the rest of the pipeline
+                System.out.println("state change bin "+x);
             } else {
-                Element trash = ElementFactory.make("fakesink", "fake");
+                String name = "fake"+(serial++);
+                Element trash = ElementFactory.make("fakesink", name);
                 pipe.add(trash);
                 PadLinkReturn stat1 = pad.link(trash.getSinkPads().get(0));
                 System.out.println("trash pad link "+stat1);
+
+                StateChangeReturn x = trash.play();
+                System.out.println("state change bin "+x);
             }
 
             pipe.debugToDotFile(Bin.DEBUG_GRAPH_SHOW_ALL, "plumbing");
         }
 
-        public void connectVideoReencode(Pad pad)
+        public Bin connectVideoReencode(Pad pad)
         {
             Bin venc = Bin.launch("videoconvert name=sink " +
                     "! videorate ! video/x-raw,framerate=30/1 " +
@@ -103,7 +111,6 @@ public class TooMuchPlumbing
 
             pipe.add(venc);
 
-            Element sink = venc.getElementByName("sink");
             Pad pad2 = venc.getSinkPads().get(0);
             System.out.println(pad2.isLinked() +"\t"+pad.isLinked());
             PadLinkReturn stat1 = pad.link(pad2);
@@ -111,7 +118,7 @@ public class TooMuchPlumbing
             System.out.println("link stat:\t"+ stat1);
 
             Pad pad3 = venc.getSrcPads().get(0);
-            Pad pad4 = mux.getRequestPad("sink_"+(padCount++));
+            Pad pad4 = mux.getRequestPad("sink_"+(serial++));
             //pad4.link(pad3);
             PadLinkReturn stat2 = pad3.link(pad4);
             System.out.println("link stat:\t"+ stat2);
@@ -119,6 +126,7 @@ public class TooMuchPlumbing
             System.out.println("encoder sink caps = "+ Support.capsReport(pad2.getNegotiatedCaps()));
             System.out.println("mux sink caps = "+ Support.capsReport(pad4.getNegotiatedCaps()));
 
+            return venc;
         }
     }
 }
