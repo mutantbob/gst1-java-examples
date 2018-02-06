@@ -8,7 +8,7 @@ public class TooMuchPlumbing
     {
         Gst.init();
 
-        mission1(TranscodedSubset.srcVideo);
+        mission1(Support.srcVideo);
 
         Gst.main();
     }
@@ -50,8 +50,8 @@ public class TooMuchPlumbing
 
         dec.connect(new ConnectSometimesPads(pipe, mux));
 
-        TranscodedSubset.addDebuggingBusListeners(pipe.getBus());
-        TranscodedSubset.rigQuitOnEOS(pipe.getBus());
+        Support.addDebuggingBusListeners(pipe.getBus());
+        Support.rigQuitOnEOS(pipe.getBus());
 
         pipe.getBus().connect((source, old, current, pending) -> System.out.println("STATE CHANGD "+source+" "+old+" "+current+" "+pending));
 
@@ -78,9 +78,9 @@ public class TooMuchPlumbing
         public void padAdded(Element element, Pad pad)
         {
             System.out.println("pad added "+pad.getName()+" "+pad.getTypeName());
-            System.out.println("allowed = "+ TranscodedSubset.capsReport(pad.getAllowedCaps()));
-            System.out.println("caps = "+ TranscodedSubset.capsReport(pad.getCaps()));
-            System.out.println("negotiated = "+ TranscodedSubset.capsReport(pad.getNegotiatedCaps()));
+            System.out.println("allowed = "+ Support.capsReport(pad.getAllowedCaps()));
+            System.out.println("caps = "+ Support.capsReport(pad.getCaps()));
+            System.out.println("negotiated = "+ Support.capsReport(pad.getNegotiatedCaps()));
 
             Caps caps = pad.getCaps();
             if (caps.getStructure(0).getName().startsWith("video")) {
@@ -116,8 +116,8 @@ public class TooMuchPlumbing
             PadLinkReturn stat2 = pad3.link(pad4);
             System.out.println("link stat:\t"+ stat2);
 
-            System.out.println("encoder sink caps = "+ TranscodedSubset.capsReport(pad2.getNegotiatedCaps()));
-            System.out.println("mux sink caps = "+ TranscodedSubset.capsReport(pad4.getNegotiatedCaps()));
+            System.out.println("encoder sink caps = "+ Support.capsReport(pad2.getNegotiatedCaps()));
+            System.out.println("mux sink caps = "+ Support.capsReport(pad4.getNegotiatedCaps()));
 
         }
     }
